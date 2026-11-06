@@ -23,18 +23,21 @@ sensor:
     update_interval: never
     accuracy_decimals: 2
     entity_category: diagnostic
+    internal: true
   - platform: template
     id: led_lvl_pm
     name: "LED Level PM2.5"
     update_interval: never
     accuracy_decimals: 2
     entity_category: diagnostic
+    internal: true
   - platform: template
     id: led_lvl_voc
     name: "LED Level TVOC"
     update_interval: never
     accuracy_decimals: 2
     entity_category: diagnostic
+    internal: true
 
 interval:
   - interval: 5s
