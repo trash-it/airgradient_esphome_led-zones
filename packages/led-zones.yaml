@@ -1,0 +1,116 @@
+# 3 Zonen: CO2 (LED 0-2) | PM2.5 (LED 4-6) | TVOC (LED 8-10), LED 3 und 7 = Trenner
+# Fade: mittlere LED jeder Zone voll, die äußeren um (LED Fade * zone_fade) gedimmt
+
+substitutions:
+  zone_fade: '2'
+  co2_green: '400'
+  co2_yellow: '1000'
+  co2_red: '2000'
+  co2_purple: '4000'
+  pm_2_5_green: '0'
+  pm_2_5_yellow: '11'
+  pm_2_5_red: '56'
+  pm_2_5_purple: '201'
+  voc_green: '100'
+  voc_yellow: '150'
+  voc_red: '250'
+  voc_purple: '400'
+
+sensor:
+  - platform: template
+    id: led_lvl_co2
+    name: "LED Level CO2"
+    update_interval: never
+    accuracy_decimals: 2
+    entity_category: diagnostic
+  - platform: template
+    id: led_lvl_pm
+    name: "LED Level PM2.5"
+    update_interval: never
+    accuracy_decimals: 2
+    entity_category: diagnostic
+  - platform: template
+    id: led_lvl_voc
+    name: "LED Level TVOC"
+    update_interval: never
+    accuracy_decimals: 2
+    entity_category: diagnostic
+
+interval:
+  - interval: 5s
+    then:
+      # Level je Sensor: 0=grün, 1=gelb, 2=rot, 3=lila (stufenlos), NaN = keine Daten
+      - lambda: |-
+          auto lvl = [](float x, float g, float y, float r, float p) -> float {
+            if (isnan(x)) return NAN;
+            if (x <= g) return 0.0f;
+            if (x <= y) return (x - g) / (y - g);
+            if (x <= r) return 1.0f + (x - y) / (r - y);
+            if (x <= p) return 2.0f + (x - r) / (p - r);
+            return 3.0f;
+          };
+          id(led_lvl_co2).publish_state(lvl(id(co2).state, $co2_green, $co2_yellow, $co2_red, $co2_purple));
+          id(led_lvl_pm).publish_state(lvl(id(pm_2_5).state, $pm_2_5_green, $pm_2_5_yellow, $pm_2_5_red, $pm_2_5_purple));
+          id(led_lvl_voc).publish_state(lvl(id(voc).state, $voc_green, $voc_yellow, $voc_red, $voc_purple));
+
+      - if:
+          condition:
+            light.is_on: led_strip
+          then:
+            # Trenner-LEDs aus
+            - light.addressable_set: {id: led_strip, range_from: 3, range_to: 3, red: 0%, green: 0%, blue: 0%}
+            - light.addressable_set: {id: led_strip, range_from: 7, range_to: 7, red: 0%, green: 0%, blue: 0%}
+
+            # ---- CO2: LED 0-2 ----
+            - light.addressable_set:
+                id: led_strip
+                range_from: 0
+                range_to: 2
+                color_brightness: !lambda 'float x = id(led_lvl_co2).state; return isnan(x) ? 0.0f : (id(led_brightness).state - id(led_fade).state * $zone_fade) / 100.0f;'
+                red: !lambda 'float x = id(led_lvl_co2).state; return x < 1 ? x : 1;'
+                green: !lambda 'float x = id(led_lvl_co2).state; return x < 1 ? 1 : (x < 2 ? 2 - x : 0);'
+                blue: !lambda 'float x = id(led_lvl_co2).state; return x < 2 ? 0 : (x < 3 ? x - 2 : 1);'
+            - light.addressable_set:
+                id: led_strip
+                range_from: 1
+                range_to: 1
+                color_brightness: !lambda 'return isnan(id(led_lvl_co2).state) ? 0.0f : id(led_brightness).state / 100.0f;'
+                red: !lambda 'float x = id(led_lvl_co2).state; return x < 1 ? x : 1;'
+                green: !lambda 'float x = id(led_lvl_co2).state; return x < 1 ? 1 : (x < 2 ? 2 - x : 0);'
+                blue: !lambda 'float x = id(led_lvl_co2).state; return x < 2 ? 0 : (x < 3 ? x - 2 : 1);'
+
+            # ---- PM2.5: LED 4-6 ----
+            - light.addressable_set:
+                id: led_strip
+                range_from: 4
+                range_to: 6
+                color_brightness: !lambda 'float x = id(led_lvl_pm).state; return isnan(x) ? 0.0f : (id(led_brightness).state - id(led_fade).state * $zone_fade) / 100.0f;'
+                red: !lambda 'float x = id(led_lvl_pm).state; return x < 1 ? x : 1;'
+                green: !lambda 'float x = id(led_lvl_pm).state; return x < 1 ? 1 : (x < 2 ? 2 - x : 0);'
+                blue: !lambda 'float x = id(led_lvl_pm).state; return x < 2 ? 0 : (x < 3 ? x - 2 : 1);'
+            - light.addressable_set:
+                id: led_strip
+                range_from: 5
+                range_to: 5
+                color_brightness: !lambda 'return isnan(id(led_lvl_pm).state) ? 0.0f : id(led_brightness).state / 100.0f;'
+                red: !lambda 'float x = id(led_lvl_pm).state; return x < 1 ? x : 1;'
+                green: !lambda 'float x = id(led_lvl_pm).state; return x < 1 ? 1 : (x < 2 ? 2 - x : 0);'
+                blue: !lambda 'float x = id(led_lvl_pm).state; return x < 2 ? 0 : (x < 3 ? x - 2 : 1);'
+
+            # ---- TVOC: LED 8-10 ----
+            - light.addressable_set:
+                id: led_strip
+                range_from: 8
+                range_to: 10
+                color_brightness: !lambda 'float x = id(led_lvl_voc).state; return isnan(x) ? 0.0f : (id(led_brightness).state - id(led_fade).state * $zone_fade) / 100.0f;'
+                red: !lambda 'float x = id(led_lvl_voc).state; return x < 1 ? x : 1;'
+                green: !lambda 'float x = id(led_lvl_voc).state; return x < 1 ? 1 : (x < 2 ? 2 - x : 0);'
+                blue: !lambda 'float x = id(led_lvl_voc).state; return x < 2 ? 0 : (x < 3 ? x - 2 : 1);'
+            - light.addressable_set:
+                id: led_strip
+                range_from: 9
+                range_to: 9
+                color_brightness: !lambda 'return isnan(id(led_lvl_voc).state) ? 0.0f : id(led_brightness).state / 100.0f;'
+                red: !lambda 'float x = id(led_lvl_voc).state; return x < 1 ? x : 1;'
+                green: !lambda 'float x = id(led_lvl_voc).state; return x < 1 ? 1 : (x < 2 ? 2 - x : 0);'
+                blue: !lambda 'float x = id(led_lvl_voc).state; return x < 2 ? 0 : (x < 3 ? x - 2 : 1);'
