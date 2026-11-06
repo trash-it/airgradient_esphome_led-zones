@@ -1,8 +1,7 @@
 # 3 Zonen: CO2 (LED 0-2) | PM2.5 (LED 4-6) | TVOC (LED 8-10), LED 3 und 7 = Trenner
-# Fade: mittlere LED jeder Zone voll, die äußeren um (LED Fade * zone_fade) gedimmt
+# Fade: mittlere LED jeder Zone voll, die äußeren LEDs um "LED Fade %" gedimmt
 
 substitutions:
-  zone_fade: '2'
   co2_green: '400'
   co2_yellow: '1000'
   co2_red: '2000'
@@ -17,27 +16,22 @@ substitutions:
   voc_purple: '400'
 
 sensor:
+  # Interne Hilfssensoren (nicht in Home Assistant sichtbar): Level 0-3 je Sensor
   - platform: template
     id: led_lvl_co2
     name: "LED Level CO2"
-    update_interval: never
-    accuracy_decimals: 2
-    entity_category: diagnostic
     internal: true
+    update_interval: never
   - platform: template
     id: led_lvl_pm
     name: "LED Level PM2.5"
-    update_interval: never
-    accuracy_decimals: 2
-    entity_category: diagnostic
     internal: true
+    update_interval: never
   - platform: template
     id: led_lvl_voc
     name: "LED Level TVOC"
-    update_interval: never
-    accuracy_decimals: 2
-    entity_category: diagnostic
     internal: true
+    update_interval: never
 
 interval:
   - interval: 5s
@@ -69,7 +63,7 @@ interval:
                 id: led_strip
                 range_from: 0
                 range_to: 2
-                color_brightness: !lambda 'float x = id(led_lvl_co2).state; return isnan(x) ? 0.0f : (id(led_brightness).state - id(led_fade).state * $zone_fade) / 100.0f;'
+                color_brightness: !lambda 'float x = id(led_lvl_co2).state; return isnan(x) ? 0.0f : (id(led_brightness).state - id(led_fade).state) / 100.0f;'
                 red: !lambda 'float x = id(led_lvl_co2).state; return x < 1 ? x : 1;'
                 green: !lambda 'float x = id(led_lvl_co2).state; return x < 1 ? 1 : (x < 2 ? 2 - x : 0);'
                 blue: !lambda 'float x = id(led_lvl_co2).state; return x < 2 ? 0 : (x < 3 ? x - 2 : 1);'
@@ -87,7 +81,7 @@ interval:
                 id: led_strip
                 range_from: 4
                 range_to: 6
-                color_brightness: !lambda 'float x = id(led_lvl_pm).state; return isnan(x) ? 0.0f : (id(led_brightness).state - id(led_fade).state * $zone_fade) / 100.0f;'
+                color_brightness: !lambda 'float x = id(led_lvl_pm).state; return isnan(x) ? 0.0f : (id(led_brightness).state - id(led_fade).state) / 100.0f;'
                 red: !lambda 'float x = id(led_lvl_pm).state; return x < 1 ? x : 1;'
                 green: !lambda 'float x = id(led_lvl_pm).state; return x < 1 ? 1 : (x < 2 ? 2 - x : 0);'
                 blue: !lambda 'float x = id(led_lvl_pm).state; return x < 2 ? 0 : (x < 3 ? x - 2 : 1);'
@@ -105,7 +99,7 @@ interval:
                 id: led_strip
                 range_from: 8
                 range_to: 10
-                color_brightness: !lambda 'float x = id(led_lvl_voc).state; return isnan(x) ? 0.0f : (id(led_brightness).state - id(led_fade).state * $zone_fade) / 100.0f;'
+                color_brightness: !lambda 'float x = id(led_lvl_voc).state; return isnan(x) ? 0.0f : (id(led_brightness).state - id(led_fade).state) / 100.0f;'
                 red: !lambda 'float x = id(led_lvl_voc).state; return x < 1 ? x : 1;'
                 green: !lambda 'float x = id(led_lvl_voc).state; return x < 1 ? 1 : (x < 2 ? 2 - x : 0);'
                 blue: !lambda 'float x = id(led_lvl_voc).state; return x < 2 ? 0 : (x < 3 ? x - 2 : 1);'
